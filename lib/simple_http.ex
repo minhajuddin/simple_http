@@ -34,6 +34,7 @@ defmodule SimpleHTTP do
     @user_agent "SimpleHTTP/#{Mix.Project.config()[:version]}"
     @recv_timeout 1000
     @http_version "HTTP/1.1"
+    @http_1_0_version "HTTP/1.0"
 
     def request(%Request{} = request, recv_timeout \\ @recv_timeout) do
       ## open a new TCP connection to the target server
@@ -73,7 +74,9 @@ defmodule SimpleHTTP do
       }
     end
 
-    defp parse_headers([@http_version <> @space <> <<status_code::binary-size(3)>> <> _ | headers]) do
+    defp parse_headers([status_line | headers]) do
+      status_code = parse_status_code(status_line)
+
       headers_map =
         headers
         |> Enum.map(fn header_line ->
@@ -85,9 +88,15 @@ defmodule SimpleHTTP do
         end)
         |> Enum.into(%{})
 
-      {:ok, String.to_integer(status_code),
-       String.to_integer(Map.get(headers_map, "content-length", "0")), headers_map}
+      {:ok, status_code, String.to_integer(Map.get(headers_map, "content-length", "0")),
+       headers_map}
     end
+
+    defp parse_status_code(@http_version <> @space <> <<status_code::binary-size(3)>> <> _),
+      do: String.to_integer(status_code)
+
+    defp parse_status_code(@http_1_0_version <> @space <> <<status_code::binary-size(3)>> <> _),
+      do: String.to_integer(status_code)
 
     ## Send Request
     defp request_packet(request) do
