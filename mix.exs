@@ -4,6 +4,9 @@ defmodule SimpleHTTP.MixProject do
   def project do
     [
       app: :simple_http,
+      name: "SimpleHTTP",
+      description: description(),
+      package: package(),
       version: "0.1.0",
       elixir: "~> 1.12",
       start_permanent: Mix.env() == :prod,
@@ -20,9 +23,25 @@ defmodule SimpleHTTP.MixProject do
 
   # Run "mix help deps" to learn about dependencies.
   defp deps do
+    []
+  end
+
+  defp description do
+    """
+    A Simple HTTP client meant to teach how to write an HTTP client.
+    """
+  end
+
+  defp package do
     [
-      # {:dep_from_hexpm, "~> 0.3.0"},
-      # {:dep_from_git, git: "https://github.com/elixir-lang/my_dep.git", tag: "0.1.0"}
+      description: description(),
+      files: ~w(lib mix.exs README.md LICENSE),
+      maintainers: ["Khaja Minhajuddin"],
+      licenses: ["MIT"],
+      links: %{
+        "Github" => "http://github.com/minhajuddin/simple_http",
+        "Docs" => "http://hexdocs.pm/simple_http"
+      }
     ]
   end
 end

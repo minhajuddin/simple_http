@@ -1,6 +1,6 @@
 # SimpleHTTP
 
-**TODO: Add description**
+A simple HTTP client
 
 ## Installation
 
