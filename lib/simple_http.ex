@@ -143,7 +143,8 @@ defmodule SimpleHTTP do
     defp request_method(:get), do: "GET"
     defp request_method(:post), do: "POST"
     defp request_method(:put), do: "PUT"
-    defp request_method(:patch), do: "PATCh"
+    defp request_method(:patch), do: "PATCH"
     defp request_method(:delete), do: "DELETE"
+    defp request_method(:head), do: "HEAD"
   end
 end
