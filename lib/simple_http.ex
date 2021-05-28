@@ -11,26 +11,11 @@ defmodule SimpleHTTP do
     defstruct status_code: nil, headers: nil, body: nil
   end
 
-  defmodule Proplist do
-    def merge(proplist, []), do: proplist
-    def merge([], defaults), do: defaults
-
-    def merge(proplist, defaults) do
-      Enum.reduce(defaults, proplist, fn {k, v}, acc ->
-        if List.keymember?(acc, k, 0) do
-          acc
-        else
-          [{k, v} | acc]
-        end
-      end)
-    end
-  end
-
   defmodule HTTP1 do
     require Logger
 
     @space " "
-    @line_ending "\r\n"
+    @crlf "\r\n"
     @user_agent "SimpleHTTP/#{Mix.Project.config()[:version]}"
     @recv_timeout 1000
     @http_version "HTTP/1.1"
@@ -43,11 +28,14 @@ defmodule SimpleHTTP do
         |> to_charlist()
         |> :gen_tcp.connect(request.uri.port, [:binary, {:active, false}, {:packet, :raw}])
 
+      #########################################
+      ## Send Request
       ## send request packet using the TCP connection
-      request_packet = request_packet(request)
+      request_packet = build_request_packet(request)
       Logger.debug(request_packet: :erlang.iolist_to_binary(request_packet))
       :ok = :gen_tcp.send(conn, request_packet)
 
+      #########################################
       ## receive the response
       # read headers
       :ok = :inet.setopts(conn, packet: :line)
@@ -98,17 +86,17 @@ defmodule SimpleHTTP do
     defp parse_status_code(@http_1_0_version <> @space <> <<status_code::binary-size(3)>> <> _),
       do: String.to_integer(status_code)
 
-    ## Send Request
-    defp request_packet(request) do
+    defp build_request_packet(request) do
       body = :erlang.iolist_to_binary(request.body)
       body_size = byte_size(body)
 
       headers =
         request.headers
         |> Enum.map(fn {k, v} -> {String.downcase(k), v} end)
-        |> Proplist.merge([{"accept", "*/*"}, {"user-agent", @user_agent}])
-        |> add_content_length(body_size)
         |> add_header("host", request_host(request.uri))
+        |> add_default_header("accept", "*/*")
+        |> add_default_header("user-agent", @user_agent)
+        |> add_content_length_header(body_size)
 
       [
         # GET /products/1?foo=bar HTTP/1.1\r\n
@@ -117,20 +105,28 @@ defmodule SimpleHTTP do
         request_path(request.uri),
         @space,
         @http_version,
-        @line_ending,
+        @crlf,
         # accept: */*\r\n
         # user-agent: SimpleHTTP\r\n
-        for({k, v} <- headers, do: [k, ?:, @space, v, @line_ending]),
-        @line_ending,
+        for({k, v} <- headers, do: [k, ?:, @space, v, @crlf]),
+        @crlf,
         body
       ]
     end
 
+    defp add_default_header(headers, key, value) do
+      if List.keymember?(headers, key, 0) do
+        add_header(headers, key, value)
+      else
+        headers
+      end
+    end
+
     defp add_header(headers, key, value), do: [{key, value} | headers]
 
-    defp add_content_length(headers, 0), do: headers
+    defp add_content_length_header(headers, 0), do: headers
 
-    defp add_content_length(headers, content_length),
+    defp add_content_length_header(headers, content_length),
       do: add_header(headers, "content-length", to_string(content_length))
 
     defp request_path(%URI{path: nil}), do: "/"
