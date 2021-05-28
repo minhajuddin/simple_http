@@ -21,12 +21,15 @@ defmodule SimpleHTTP do
     @http_version "HTTP/1.1"
     @http_1_0_version "HTTP/1.0"
 
-    def request(%Request{} = request, recv_timeout \\ @recv_timeout) do
+    def connect(%URI{} = uri) do
       ## open a new TCP connection to the target server
-      {:ok, conn} =
-        request.uri.host
-        |> to_charlist()
-        |> :gen_tcp.connect(request.uri.port, [:binary, {:active, false}, {:packet, :raw}])
+      uri.host
+      |> to_charlist()
+      |> :gen_tcp.connect(uri.port, [:binary, {:active, false}, {:packet, :raw}])
+    end
+
+    def request(conn \\ nil, %Request{} = request, recv_timeout \\ @recv_timeout) do
+      {:ok, conn} = if conn, do: {:ok, conn}, else: connect(request.uri)
 
       #########################################
       ## Send Request
